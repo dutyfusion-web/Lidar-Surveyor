@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LIDAR SURVEYOR [ALPHA]</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Courier New', Courier, monospace; touch-action: none; }
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #fff;
+            pointer-events: none;
+            z-index: 5;
+            text-transform: uppercase;
+            font-size: 14px;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.9), 0 0 20px rgba(0, 255, 255, 0.5);
+        }
+        #credit {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            color: rgba(0, 255, 255, 0.6);
+            font-size: 10px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            z-index: 5;
+            pointer-events: none;
+        }
+        #instructions {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            text-align: center;
+            background: rgba(0,0,0,0.95);
+            padding: 30px;
+            border: 2px solid #ff0000;
+            z-index: 10;
+            box-shadow: 0 0 50px rgba(255, 0, 0, 0.3);
+            width: 80%;
+            max-width: 400px;
+        }
+        button {
+            background: transparent;
+            color: #ff0000;
+            border: 2px solid #ff0000;
+            padding: 15px 35px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+            margin-top: 20px;
+            transition: all 0.3s;
+            text-shadow: 0 0 10px #ff0000;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        button:hover {
+            background: #ff0000;
+            color: #000;
+            box-shadow: 0 0 30px #ff0000;
+        }
+        #game-over {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #000;
+            color: #ff0000;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+        }
+        #vhs-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 255, 0, 0.03));
+            background-size: 100% 3px, 3px 100%;
+            z-index: 2;
+            opacity: 0.5;
+        }
+        #glitch {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            background: #ff0000;
+            opacity: 0;
+            z-index: 3;
+        }
+        #interaction-prompt {
+            position: absolute;
+            bottom: 30%;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #fff;
+            text-shadow: 0 0 15px #00ffff;
+            display: none;
+            z-index: 5;
+            font-size: 18px;
+            letter-spacing: 4px;
+            text-align: center;
+        }
+        #scanner-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 4px;
+            background: #00ffff;
+            box-shadow: 0 0 25px #00ffff;
+            width: 0%;
+            z-index: 6;
+        }
+
+        /* Mobile Controls */
+        #mobile-controls {
+            position: absolute;
+            bottom: 40px;
+            left: 0;
+            width: 100%;
+            height: 150px;
+            display: none;
+            z-index: 10;
+            pointer-events: none;
+        }
+        #joystick-zone {
+            position: absolute;
+            left: 40px;
+            bottom: 0;
+            width: 120px;
+            height: 120px;
+            background: rgba(255,255,255,0.1);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            pointer-events: auto;
+        }
+        #joystick-knob {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 50px;
+            height: 50px;
+            background: rgba(0, 255, 255, 0.5);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+        #action-btn {
+            position: absolute;
+            right: 40px;
+            bottom: 0;
+            width: 100px;
+            height: 100px;
+            background: rgba(255, 0, 0, 0.2);
+            border: 2px solid #ff0000;
+            border-radius: 50%;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+            pointer-events: auto;
+            user-select: none;
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.3);
+            text-transform: uppercase;
+        }
+        #action-btn:active { background: rgba(255, 0, 0, 0.5); transform: scale(0.9); }
+
+        #station-finder {
+            color: #ffff00;
+            font-size: 10px;
+            margin-top: 5px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="vhs-overlay"></div>
+    <div id="glitch"></div>
+    <div id="scanner-bar"></div>
+    <div id="ui">
+        <div style="font-size: 18px; margin-bottom: 5px; color: #00ffff;">LIDAR-SURVEYOR [ALPHA]</div>
+        <div>Uptime: <span id="timer">00:00:00</span></div>
+        <div>Battery: <span id="battery">100%</span></div>
+        <div id="station-finder">⚡ POWER SIGNAL DETECTED ⚡</div>
+        <div id="stealth-status" style="color: #00ff00; margin-top: 10px;">BIO-SIG: INVISIBLE</div>
+        <div id="warning" style="color: red; display: none; font-weight: bold; margin-top: 15px; animation: pulse 1s infinite;">!! ENTITY DETECTED !!</div>
+        <div id="status-msg" style="color: #00ffff; margin-top: 10px;"></div>
+    </div>
+
+    <div id="credit">MADE BY FREDDIE BURGESS</div>
+
+    <div id="interaction-prompt">PRESS [E] TO INTERACT</div>
+
+    <!-- Mobile UI -->
+    <div id="mobile-controls">
+        <div id="joystick-zone">
+            <div id="joystick-knob"></div>
+        </div>
+        <div id="action-btn">PULSE</div>
+    </div>
+
+    <div id="instructions">
+        <h1 style="letter-spacing: 4px; color: #ff0000; margin-bottom: 10px;">LIDAR SURVEYOR [ALPHA]</h1>
+        <p style="color: #666; font-size: 12px; margin-bottom: 30px;">OBJECTIVE: MAP THE VOID & SURVIVE</p>
+        <div id="pc-controls-list" style="text-align: left; margin: 20px auto; max-width: 300px; font-size: 13px; line-height: 1.8;">
+            <p><span style="color:#00ffff">[SPACE]</span> EMIT LIDAR PULSE</p>
+            <p><span style="color:#00ffff">[WASD]</span> NAVIGATE</p>
+            <p><span style="color:#00ffff">[SHIFT]</span> DAMPEN FOOTSTEPS</p>
+            <p><span style="color:#00ffff">[E]</span> ENTER/EXIT RECEPTACLE</p>
+        </div>
+        <div id="mobile-controls-list" style="display:none; text-align: left; margin: 20px auto; max-width: 300px; font-size: 13px; line-height: 1.8;">
+            <p><span style="color:#00ffff">[JOYSTICK]</span> MOVE / LOOK</p>
+            <p><span style="color:#ff0000">[PULSE]</span> SCAN / INTERACT</p>
+        </div>
+        <p style="font-size: 11px; color: #ff9900; margin-top: 10px;">TIP: POWER STATIONS EMIT A CONSTANT AMBIENT HUM AND GLOW.</p>
+        <button id="start-btn">INITIALIZE SYSTEM</button>
+    </div>
+
+    <div id="game-over">
+        <h1 style="font-size: 3em; letter-spacing: 15px; color: #ff0000;">COMM-LINK SEVERED</h1>
+        <p style="letter-spacing: 3px; color: #444;">SURVEYOR UNIT UNRECOVERABLE</p>
+        <button id="restart-btn">REBOOT SYSTEM</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        let scene, camera, renderer, clock;
+        let particles = [];
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false, isCreeping = false;
+        let walls = [];
+        let lockers = [];
+        let chargingStations = [];
+        let floors = [];
+        let monster;
+        let battery = 100;
+        let gameStarted = false;
+        let isHidden = false;
+        let currentLocker = null;
+        let yaw = new THREE.Object3D();
+        let pitch = new THREE.Object3D();
+        let audioCtx;
+        let isScanning = false;
+        let isMobile = 'ontouchstart' in window;
+
+        // Audio node for Power Station hum
+        let humGain;
+
+        // Joystick state
+        let joystickActive = false;
+        let joystickVector = new THREE.Vector2(0, 0);
+
+        function initAudio() {
+            if (audioCtx) return;
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // Background static
+            const bufferSize = 2 * audioCtx.sampleRate;
+            const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const output = noiseBuffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
+            const whiteNoise = audioCtx.createBufferSource();
+            whiteNoise.buffer = noiseBuffer;
+            whiteNoise.loop = true;
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.value = 200; 
+            const lfo = audioCtx.createOscillator();
+            const lfoGain = audioCtx.createGain();
+            lfo.type = 'sine';
+            lfo.frequency.value = 0.1; 
+            lfoGain.gain.value = 150; 
+            lfo.connect(lfoGain);
+            lfoGain.connect(filter.frequency);
+            const mainGain = audioCtx.createGain();
+            mainGain.gain.value = 0.15;
+            whiteNoise.connect(filter);
+            filter.connect(mainGain);
+            mainGain.connect(audioCtx.destination);
+            whiteNoise.start();
+            lfo.start();
+
+            // Power Station hum
+            const humOsc = audioCtx.createOscillator();
+            humGain = audioCtx.createGain();
+            humOsc.type = 'triangle';
+            humOsc.frequency.value = 60; // Deep hum
+            humGain.gain.value = 0;
+            humOsc.connect(humGain);
+            humGain.connect(audioCtx.destination);
+            humOsc.start();
+        }
+
+        function playScanAudio(duration) {
+            if(!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(100, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + duration);
+            gain.gain.setValueAtTime(0, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + 0.1);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        function init() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            scene.add(yaw);
+            yaw.add(pitch);
+            pitch.add(camera);
+            yaw.position.y = 1.6;
+
+            renderer = new THREE.WebGLRenderer({ antialias: false });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            document.body.appendChild(renderer.domElement);
+            
+            clock = new THREE.Clock();
+            
+            createProceduralMaze();
+            createMonster();
+            setupEvents();
+
+            if (isMobile) {
+                document.getElementById('mobile-controls').style.display = 'block';
+                document.getElementById('mobile-controls-list').style.display = 'block';
+                document.getElementById('pc-controls-list').style.display = 'none';
+            }
+        }
+
+        function createProceduralMaze() {
+            const mat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+            const size = 15;
+            const grid = 12;
+            const wallHeight = 12;
+            const floorGeo = new THREE.PlaneGeometry(400, 400);
+            const floor = new THREE.Mesh(floorGeo, mat);
+            floor.rotation.x = -Math.PI / 2;
+            scene.add(floor);
+            floors.push(floor); 
+
+            for (let x = 0; x < grid; x++) {
+                for (let z = 0; z < grid; z++) {
+                    const posX = (x - grid/2) * size;
+                    const posZ = (z - grid/2) * size;
+                    if (Math.abs(posX) < size && Math.abs(posZ) < size) continue;
+                    
+                    const rand = Math.random();
+                    if (rand > 0.6 || x === 0 || x === grid-1 || z === 0 || z === grid-1) {
+                        const wall = new THREE.Mesh(new THREE.BoxGeometry(size, wallHeight, size), mat);
+                        wall.position.set(posX, wallHeight/2, posZ);
+                        scene.add(wall);
+                        walls.push(wall);
+                    } else if (rand > 0.55) {
+                        const locker = new THREE.Mesh(new THREE.BoxGeometry(2.2, 5.5, 2.2), mat);
+                        locker.position.set(posX, 2.75, posZ);
+                        scene.add(locker);
+                        lockers.push(locker);
+                    } else if (rand < 0.08 && chargingStations.length < 5) {
+                        // Rare Power Station
+                        const station = new THREE.Mesh(new THREE.BoxGeometry(1.5, 6, 1.5), mat);
+                        station.position.set(posX, 3, posZ);
+                        scene.add(station);
+                        chargingStations.push(station);
+                    }
+                }
+            }
+        }
+
+        function createMonster() {
+            monster = {
+                pos: new THREE.Vector3(80, 0, 80),
+                speed: 0.055,
+                active: false,
+                stunned: false,
+                stunTimer: 0,
+                dormancyTimer: 25,
+                roamTarget: new THREE.Vector3(80, 0, 80)
+            };
+        }
+
+        function setupEvents() {
+            window.addEventListener('keydown', e => {
+                if(e.code === 'KeyW') moveForward = true;
+                if(e.code === 'KeyS') moveBackward = true;
+                if(e.code === 'KeyA') moveLeft = true;
+                if(e.code === 'KeyD') moveRight = true;
+                if(e.code === 'ShiftLeft') isCreeping = true;
+                if(e.code === 'Space') startScan();
+                if(e.code === 'KeyE') tryToggleHide();
+            });
+            window.addEventListener('keyup', e => {
+                if(e.code === 'KeyW') moveForward = false;
+                if(e.code === 'KeyS') moveBackward = false;
+                if(e.code === 'KeyA') moveLeft = false;
+                if(e.code === 'KeyD') moveRight = false;
+                if(e.code === 'ShiftLeft') isCreeping = false;
+            });
+
+            window.addEventListener('mousemove', e => {
+                if (document.pointerLockElement !== document.body && !isMobile) return;
+                yaw.rotation.y -= e.movementX * 0.002;
+                pitch.rotation.x -= e.movementY * 0.002;
+                pitch.rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, pitch.rotation.x));
+            });
+
+            let lastTouchX, lastTouchY;
+            window.addEventListener('touchstart', e => {
+                if (!gameStarted) return;
+                const touch = e.touches[0];
+                lastTouchX = touch.pageX;
+                lastTouchY = touch.pageY;
+            }, {passive: false});
+
+            window.addEventListener('touchmove', e => {
+                if (!gameStarted) return;
+                const touch = e.touches[0];
+                const rect = document.getElementById('joystick-zone').getBoundingClientRect();
+                const btnRect = document.getElementById('action-btn').getBoundingClientRect();
+                
+                const isJoystickTouch = touch.pageX > rect.left && touch.pageX < rect.right && touch.pageY > rect.top && touch.pageY < rect.bottom;
+                const isBtnTouch = touch.pageX > btnRect.left && touch.pageX < btnRect.right && touch.pageY > btnRect.top && touch.pageY < btnRect.bottom;
+
+                if (!isJoystickTouch && !isBtnTouch) {
+                    const movementX = touch.pageX - lastTouchX;
+                    const movementY = touch.pageY - lastTouchY;
+                    yaw.rotation.y -= movementX * 0.005;
+                    pitch.rotation.x -= movementY * 0.005;
+                    pitch.rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, pitch.rotation.x));
+                }
+                lastTouchX = touch.pageX;
+                lastTouchY = touch.pageY;
+            }, {passive: false});
+
+            const joystickZone = document.getElementById('joystick-zone');
+            const knob = document.getElementById('joystick-knob');
+            
+            const handleJoystick = (e) => {
+                const touch = e.touches[0];
+                const rect = joystickZone.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                const dx = touch.pageX - centerX;
+                const dy = touch.pageY - centerY;
+                const dist = Math.min(60, Math.sqrt(dx*dx + dy*dy));
+                const angle = Math.atan2(dy, dx);
+                const lx = Math.cos(angle) * dist;
+                const ly = Math.sin(angle) * dist;
+                knob.style.transform = `translate(calc(-50% + ${lx}px), calc(-50% + ${ly}px))`;
+                joystickVector.set(lx / 60, ly / 60);
+                joystickActive = true;
+            };
+
+            joystickZone.addEventListener('touchstart', handleJoystick);
+            joystickZone.addEventListener('touchmove', (e) => { e.preventDefault(); handleJoystick(e); });
+            joystickZone.addEventListener('touchend', () => {
+                knob.style.transform = `translate(-50%, -50%)`;
+                joystickVector.set(0, 0);
+                joystickActive = false;
+            });
+
+            document.getElementById('action-btn').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                let nearInteractive = false;
+                for(let l of lockers) if(yaw.position.distanceTo(l.position) < 4) { nearInteractive = true; break; }
+                if (nearInteractive || isHidden) tryToggleHide();
+                else startScan();
+            });
+
+            document.getElementById('start-btn').onclick = () => {
+                initAudio();
+                document.getElementById('instructions').style.display = 'none';
+                if (!isMobile) document.body.requestPointerLock();
+                gameStarted = true;
+            };
+            document.getElementById('restart-btn').onclick = () => location.reload();
+        }
+
+        function tryToggleHide() {
+            if (isHidden) {
+                isHidden = false;
+                currentLocker = null;
+                document.getElementById('stealth-status').innerText = 'BIO-SIG: INVISIBLE';
+                document.getElementById('stealth-status').style.color = '#00ff00';
+            } else {
+                for (let l of lockers) {
+                    if (yaw.position.distanceTo(l.position) < 4) {
+                        isHidden = true;
+                        currentLocker = l;
+                        document.getElementById('stealth-status').innerText = 'BIO-SIG: MASKED';
+                        document.getElementById('stealth-status').style.color = '#00ffff';
+                        monster.roamTarget.set((Math.random() - 0.5) * 150, 0, (Math.random() - 0.5) * 150);
+                        break;
+                    }
+                }
+            }
+        }
+
+        function startScan() {
+            if (isScanning || battery <= 0) return;
+            isScanning = true;
+            const duration = 1.2;
+            playScanAudio(duration);
+            const bar = document.getElementById('scanner-bar');
+            bar.style.transition = `width ${duration}s linear`;
+            bar.style.width = '100%';
+            prepareLidarSweep(yaw.position.clone(), camera.getWorldDirection(new THREE.Vector3()), duration);
+            setTimeout(() => {
+                isScanning = false;
+                bar.style.transition = 'none';
+                bar.style.width = '0%';
+                battery -= 4;
+                document.getElementById('battery').innerText = Math.max(0, Math.floor(battery)) + '%';
+            }, duration * 1000);
+        }
+
+        function prepareLidarSweep(origin, forwardDir, duration) {
+            const raycaster = new THREE.Raycaster();
+            const sweepSteps = 60; 
+            const pointsPerSweep = 40;
+            const rightDir = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), forwardDir).normalize();
+            const upDir = new THREE.Vector3().crossVectors(forwardDir, rightDir).normalize();
+            const sweepData = [];
+            const allTargets = [...walls, ...lockers, ...chargingStations, ...floors];
+
+            for (let s = 0; s < sweepSteps; s++) {
+                const vAngle = (s / sweepSteps - 0.5) * 1.6;
+                const row = [];
+                for (let p = 0; p < pointsPerSweep; p++) {
+                    const hAngle = (p / pointsPerSweep - 0.5) * 2.2;
+                    const scanDir = forwardDir.clone().add(rightDir.clone().multiplyScalar(hAngle)).add(upDir.clone().multiplyScalar(vAngle)).normalize();
+                    raycaster.set(origin, scanDir);
+                    const intersects = raycaster.intersectObjects(allTargets);
+                    if (intersects.length > 0 && intersects[0].distance < 75) {
+                        const hit = intersects[0];
+                        const pt = hit.point;
+                        let type = 0; 
+                        if (lockers.includes(hit.object)) type = 1; 
+                        else if (chargingStations.includes(hit.object)) type = 3; 
+                        else if (floors.includes(hit.object)) type = 2;
+                        row.push({ x: pt.x, y: pt.y, z: pt.z, type, dist: hit.distance });
+                    }
+                }
+                sweepData.push(row);
+            }
+
+            if (monster.active && !monster.stunned) {
+                const mDist = origin.distanceTo(monster.pos);
+                if (mDist < 40 && monster.pos.clone().sub(origin).normalize().dot(forwardDir) > 0.8) stunMonster();
+            }
+
+            const startTime = performance.now();
+            const animateSweep = (now) => {
+                const elapsed = (now - startTime) / 1000;
+                const progress = elapsed / duration;
+                if (progress > 1.2) return; 
+                const targetRow = Math.min(Math.floor(progress * sweepSteps), sweepSteps - 1);
+                if (sweepData[targetRow] && !sweepData[targetRow].rendered) {
+                    sweepData[targetRow].rendered = true;
+                    const positions = [], colors = [];
+                    sweepData[targetRow].forEach(pt => {
+                        positions.push(pt.x, pt.y, pt.z);
+                        if (pt.type === 1) colors.push(0, 0.9, 1);
+                        else if (pt.type === 3) colors.push(1, 0.9, 0); // Power station Yellow
+                        else if (pt.type === 2) { const i = 0.2 + Math.random()*0.1; colors.push(i,i,i); }
+                        else { const i = 0.4 + Math.random()*0.2; colors.push(i,i,i); }
+                    });
+                    if (monster.active && origin.distanceTo(monster.pos) < 50) {
+                         const mDistPct = origin.distanceTo(monster.pos) / 75;
+                         if (Math.abs(progress - mDistPct) < 0.15) renderHumanoidMonster(positions, colors);
+                    }
+                    if (positions.length > 0) {
+                        const geo = new THREE.BufferGeometry();
+                        geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+                        geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+                        const mat = new THREE.PointsMaterial({ size: 0.18, vertexColors: true, transparent: true, opacity: 1 });
+                        const pMesh = new THREE.Points(geo, mat);
+                        scene.add(pMesh);
+                        particles.push({ mesh: pMesh, life: 1.0 });
+                    }
+                }
+                requestAnimationFrame(animateSweep);
+            };
+            requestAnimationFrame(animateSweep);
+        }
+
+        function renderHumanoidMonster(posArr, colArr) {
+            const mPos = monster.pos;
+            const h = 3.5; 
+            addPointSphere(mPos.x, mPos.y + h, mPos.z, 0.4, 8, posArr, colArr);
+            addPointCylinder(mPos.x, mPos.y + h - 1.2, mPos.z, 0.6, 1.8, 15, posArr, colArr);
+            addPointCylinder(mPos.x - 0.8, mPos.y + h - 0.8, mPos.z, 0.2, 1.5, 8, posArr, colArr);
+            addPointCylinder(mPos.x + 0.8, mPos.y + h - 0.8, mPos.z, 0.2, 1.5, 8, posArr, colArr);
+            addPointCylinder(mPos.x - 0.4, mPos.y + h - 2.8, mPos.z, 0.2, 1.6, 8, posArr, colArr);
+            addPointCylinder(mPos.x + 0.4, mPos.y + h - 2.8, mPos.z, 0.2, 1.6, 8, posArr, colArr);
+        }
+
+        function addPointSphere(cx, cy, cz, r, count, posArr, colArr, color = [1,0,0]) {
+            for(let i=0; i<count; i++) {
+                const u = Math.random(), v = Math.random();
+                const theta = 2 * Math.PI * u, phi = Math.acos(2 * v - 1);
+                posArr.push(cx + r * Math.sin(phi) * Math.cos(theta), cy + r * Math.sin(phi) * Math.sin(theta), cz + r * Math.cos(phi));
+                colArr.push(color[0], color[1], color[2]);
+            }
+        }
+
+        function addPointCylinder(cx, cy, cz, r, h, count, posArr, colArr) {
+            for(let i=0; i<count; i++) {
+                const theta = Math.random() * Math.PI * 2, py = (Math.random() - 0.5) * h;
+                posArr.push(cx + r * Math.cos(theta), cy + py, cz + r * Math.sin(theta));
+                colArr.push(1, 0, 0);
+            }
+        }
+
+        function stunMonster() {
+            monster.stunned = true;
+            monster.stunTimer = 6;
+            const msg = document.getElementById('status-msg');
+            msg.innerText = "ENTITY BLINDED - EVADE NOW";
+            setTimeout(() => msg.innerText = "", 3000);
+        }
+
+        function updateMonster(delta, time) {
+            if (!monster.active) {
+                if (time > monster.dormancyTimer) {
+                    monster.active = true;
+                    document.getElementById('status-msg').innerText = "HOSTILE SIGNAL DETECTED: UNIT COMPROMISED";
+                    setTimeout(() => document.getElementById('status-msg').innerText = "", 4000);
+                }
+                return;
+            }
+            if (monster.stunned) {
+                monster.stunTimer -= delta;
+                if (monster.stunTimer <= 0) monster.stunned = false;
+                return;
+            }
+            const dist = yaw.position.distanceTo(monster.pos);
+            if (dist < 3.0 && !isHidden) {
+                gameStarted = false;
+                if(!isMobile) document.exitPointerLock();
+                document.getElementById('game-over').style.display = 'flex';
+            }
+            if (isHidden) {
+                const dir = new THREE.Vector3().subVectors(monster.roamTarget, monster.pos).normalize();
+                monster.pos.add(dir.multiplyScalar(monster.speed * 0.8));
+                if (monster.pos.distanceTo(monster.roamTarget) < 5) monster.roamTarget.set((Math.random()-0.5)*150, 0, (Math.random()-0.5)*150);
+            } else {
+                let isCharging = false;
+                for(let s of chargingStations) if(yaw.position.distanceTo(s.position) < 5) { isCharging = true; break; }
+
+                const dir = new THREE.Vector3().subVectors(yaw.position, monster.pos).normalize();
+                let moveSpeed = monster.speed;
+                if (isCharging) moveSpeed *= 1.8; 
+                else if (dist < 20) moveSpeed *= 1.4;
+
+                monster.pos.add(dir.multiplyScalar(moveSpeed));
+            }
+            const warning = document.getElementById('warning'), glitch = document.getElementById('glitch');
+            if (dist < 25) { warning.style.display = 'block'; glitch.style.opacity = (25 - dist) / 35; } 
+            else { warning.style.display = 'none'; glitch.style.opacity = 0; }
+        }
+
+        function animate() {
+            if (!gameStarted) { requestAnimationFrame(animate); return; }
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta(), elapsed = clock.getElapsedTime();
+
+            // Passive "Heat Haze" Lidar effect for stations (Beacons)
+            chargingStations.forEach(s => {
+                if (Math.random() < 0.1) {
+                    const pos = [];
+                    const col = [];
+                    // Small upward drifting particles
+                    const rx = (Math.random() - 0.5) * 2;
+                    const rz = (Math.random() - 0.5) * 2;
+                    pos.push(s.position.x + rx, s.position.y + Math.random() * 8, s.position.z + rz);
+                    col.push(1, 1, Math.random()); // Yellow-ish white
+                    
+                    const geo = new THREE.BufferGeometry();
+                    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+                    geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+                    const mat = new THREE.PointsMaterial({ size: 0.3, vertexColors: true, transparent: true, opacity: 0.8 });
+                    const pMesh = new THREE.Points(geo, mat);
+                    scene.add(pMesh);
+                    particles.push({ mesh: pMesh, life: 1.5 });
+                }
+            });
+
+            // Audio hum management
+            let nearestDist = 999;
+            chargingStations.forEach(s => {
+                const d = yaw.position.distanceTo(s.position);
+                if (d < nearestDist) nearestDist = d;
+            });
+            if (humGain) {
+                const vol = Math.max(0, 0.4 * (1 - nearestDist / 30));
+                humGain.gain.setTargetAtTime(vol, audioCtx.currentTime, 0.1);
+            }
+
+            // HUD finder
+            document.getElementById('station-finder').style.display = nearestDist < 20 ? 'block' : 'none';
+
+            if (!isHidden) {
+                const speed = isCreeping ? 1.5 : 4.5;
+                const dir = new THREE.Vector3();
+                if(moveForward) dir.z -= 1;
+                if(moveBackward) dir.z += 1;
+                if(moveLeft) dir.x -= 1;
+                if(moveRight) dir.x += 1;
+                if (joystickActive) { dir.x = joystickVector.x; dir.z = joystickVector.y; }
+
+                dir.normalize().applyQuaternion(yaw.quaternion).multiplyScalar(speed * delta);
+                const nextPos = yaw.position.clone().add(dir);
+                let hit = false;
+                for(let w of walls) { if(new THREE.Box3().setFromObject(w).containsPoint(nextPos)) { hit = true; break; } }
+                if(!hit) yaw.position.copy(nextPos);
+
+                let charging = false;
+                for(let s of chargingStations) {
+                    if(yaw.position.distanceTo(s.position) < 5) {
+                        charging = true;
+                        battery = Math.min(100, battery + (delta * 12));
+                        document.getElementById('battery').innerText = Math.floor(battery) + '%';
+                        document.getElementById('stealth-status').innerText = 'BIO-SIG: EXPOSED (CHARGING)';
+                        document.getElementById('stealth-status').style.color = '#ff0000';
+                        break;
+                    }
+                }
+                if(!charging) {
+                    document.getElementById('stealth-status').innerText = 'BIO-SIG: INVISIBLE';
+                    document.getElementById('stealth-status').style.color = '#00ff00';
+                }
+
+                let nearLocker = false;
+                for(let l of lockers) { if(yaw.position.distanceTo(l.position) < 4) { nearLocker = true; break; } }
+                const prompt = document.getElementById('interaction-prompt');
+                prompt.style.display = (nearLocker || charging) ? 'block' : 'none';
+                if (charging) {
+                    prompt.innerText = "SYSTEM RECHARGING...";
+                    prompt.style.color = "#ffff00";
+                } else {
+                    prompt.innerText = isMobile ? "PULSE TO HIDE" : "PRESS [E] TO HIDE";
+                    prompt.style.color = "#fff";
+                }
+            } else {
+                yaw.position.copy(currentLocker.position);
+                const prompt = document.getElementById('interaction-prompt');
+                prompt.innerText = isMobile ? "PULSE TO EXIT" : "PRESS [E] TO EXIT";
+                prompt.style.display = 'block';
+            }
+            
+            yaw.position.y = 1.6;
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].life -= delta * 0.45;
+                particles[i].mesh.material.opacity = particles[i].life;
+                if (particles[i].life <= 0) { scene.remove(particles[i].mesh); particles.splice(i, 1); }
+            }
+            updateMonster(delta, elapsed);
+            renderer.render(scene, camera);
+            const m = Math.floor(elapsed / 60).toString().padStart(2,'0'), s = Math.floor(elapsed % 60).toString().padStart(2,'0'), ms = Math.floor((elapsed % 1) * 100).toString().padStart(2,'0');
+            document.getElementById('timer').innerText = `${m}:${s}:${ms}`;
+        }
+
+        init();
+        animate();
+        window.onresize = () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        };
+    </script>
+</body>
+</html>
